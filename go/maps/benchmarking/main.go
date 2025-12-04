@@ -28,6 +28,14 @@ func main() {
 	fmt.Printf("mapStr took %f to read\n", time.Since(now).Seconds())
 
 	now = time.Now()
+	mm = mapStr2Make(n)
+	fmt.Printf("mapStr2 took %f to make\n", time.Since(now).Seconds())
+
+	now = time.Now()
+	mapStr2Read(mm, n)
+	fmt.Printf("mapStr2 took %f to read\n", time.Since(now).Seconds())
+
+	now = time.Now()
 	mb := mapBytesMake(n)
 	fmt.Printf("mapBytes took %f to make\n", time.Since(now).Seconds())
 
@@ -46,8 +54,8 @@ func mapBytesMake(sz uint64) map[[16]byte]ObjectCache {
 	var key [16]byte
 	var o ObjectCache
 	for i := range sz {
+		binary.LittleEndian.PutUint64(key[:8], i)
 		for j := range sz {
-			binary.LittleEndian.PutUint64(key[:8], i)
 			binary.LittleEndian.PutUint64(key[8:], j)
 
 			o.BodyMetadataIndex = i*sz + j
@@ -61,8 +69,8 @@ func mapBytesRead(m map[[16]byte]ObjectCache, sz uint64) {
 	var ok bool
 	var key [16]byte
 	for i := range sz {
+		binary.LittleEndian.PutUint64(key[:8], i)
 		for j := range sz {
-			binary.LittleEndian.PutUint64(key[:8], i)
 			binary.LittleEndian.PutUint64(key[8:], j)
 			_, ok = m[key]
 			if !ok {
@@ -135,6 +143,35 @@ func mapStrRead(m map[string]ObjectCache, sz uint64) {
 	for i := range sz {
 		for j := range sz {
 			_, ok = m[fmt.Sprintf("%d.%d", i, j)]
+			if !ok {
+				panic(fmt.Errorf("missing entry i, j = %d, %d", i, j))
+			}
+		}
+	}
+}
+
+func mapStr2Make(sz uint64) map[string]ObjectCache {
+	m := make(map[string]ObjectCache)
+	var o ObjectCache
+	var key string
+	for i := range sz {
+		key = fmt.Sprintf("%d", i)
+		for j := range sz {
+			o.BodyMetadataIndex = i*sz + j
+			m[fmt.Sprintf("%s.%d", key, j)] = o
+		}
+	}
+
+	return m
+}
+
+func mapStr2Read(m map[string]ObjectCache, sz uint64) {
+	var ok bool
+	var key string
+	for i := range sz {
+		key = fmt.Sprintf("%d", i)
+		for j := range sz {
+			_, ok = m[fmt.Sprintf("%s.%d", key, j)]
 			if !ok {
 				panic(fmt.Errorf("missing entry i, j = %d, %d", i, j))
 			}
