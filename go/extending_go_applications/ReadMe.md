@@ -2,7 +2,9 @@
 
 The overall inspiration for the question is to be able to publish a
 docker image with some base code, and allow additional functionality
-by extending the Dockerfile. In the `exec/` example, this would be
+by extending the Dockerfile.
+
+In the `exec/` example, this would be
 by compiling the external program `exec/plugins/plugin1/main.go` and adding it
 to the config (not written) for `exec/main.g`.
 
@@ -17,6 +19,9 @@ RUN echo './plugin1.x' >> some-config.yaml
 # base-server.x (aka exec/main.go in example) runs with the plugin1 loaded.
 CMD ["/base-server.x", "...args"]
 ```
+
+At present, the plugins I'm imagining are data soruces that run once every 6 hours or so, rather
+than updates to data served to clients during normal server operation.
 
 Requirements I'm hoping to hit:
 
