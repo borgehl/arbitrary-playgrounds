@@ -42,6 +42,22 @@ func main() {
 	now = time.Now()
 	mapBytesRead(mb, n)
 	fmt.Printf("mapBytes took %f to read\n", time.Since(now).Seconds())
+
+	now = time.Now()
+	ms := mapStructMake(n)
+	fmt.Printf("mapStruct took %f to make\n", time.Since(now).Seconds())
+
+	now = time.Now()
+	mapStructRead(ms, n)
+	fmt.Printf("mapStruct took %f to read\n", time.Since(now).Seconds())
+
+	now = time.Now()
+	ms2 := mapStructMake2(n)
+	fmt.Printf("mapStruct2 took %f to make\n", time.Since(now).Seconds())
+
+	now = time.Now()
+	mapStructRead2(ms2, n)
+	fmt.Printf("mapStruct2 took %f to read\n", time.Since(now).Seconds())
 }
 
 type ObjectCache struct {
@@ -54,9 +70,9 @@ func mapBytesMake(sz uint64) map[[16]byte]ObjectCache {
 	var key [16]byte
 	var o ObjectCache
 	for i := range sz {
-		binary.LittleEndian.PutUint64(key[:8], i)
+		binary.BigEndian.PutUint64(key[:8], i)
 		for j := range sz {
-			binary.LittleEndian.PutUint64(key[8:], j)
+			binary.BigEndian.PutUint64(key[8:], j)
 
 			o.BodyMetadataIndex = i*sz + j
 			m[key] = o
@@ -69,9 +85,9 @@ func mapBytesRead(m map[[16]byte]ObjectCache, sz uint64) {
 	var ok bool
 	var key [16]byte
 	for i := range sz {
-		binary.LittleEndian.PutUint64(key[:8], i)
+		binary.BigEndian.PutUint64(key[:8], i)
 		for j := range sz {
-			binary.LittleEndian.PutUint64(key[8:], j)
+			binary.BigEndian.PutUint64(key[8:], j)
 			_, ok = m[key]
 			if !ok {
 				panic(fmt.Errorf("missing entry i, j = %d, %d", i, j))
@@ -172,6 +188,64 @@ func mapStr2Read(m map[string]ObjectCache, sz uint64) {
 		key = fmt.Sprintf("%d", i)
 		for j := range sz {
 			_, ok = m[fmt.Sprintf("%s.%d", key, j)]
+			if !ok {
+				panic(fmt.Errorf("missing entry i, j = %d, %d", i, j))
+			}
+		}
+	}
+}
+
+type MapKey struct{ I, J uint64 }
+
+func mapStructMake(sz uint64) map[MapKey]ObjectCache {
+	m := make(map[MapKey]ObjectCache)
+	var o ObjectCache
+	var key MapKey
+	for i := range sz {
+		key.I = i
+		for j := range sz {
+			key.J = j
+			o.BodyMetadataIndex = i*sz + j
+			m[key] = o
+		}
+	}
+
+	return m
+}
+
+func mapStructRead(m map[MapKey]ObjectCache, sz uint64) {
+	var ok bool
+	var key MapKey
+	for i := range sz {
+		key.I = i
+		for j := range sz {
+			key.J = j
+			_, ok = m[key]
+			if !ok {
+				panic(fmt.Errorf("missing entry i, j = %d, %d", i, j))
+			}
+		}
+	}
+}
+
+func mapStructMake2(sz uint64) map[MapKey]ObjectCache {
+	m := make(map[MapKey]ObjectCache)
+	var o ObjectCache
+	for i := range sz {
+		for j := range sz {
+			o.BodyMetadataIndex = i*sz + j
+			m[MapKey{i, j}] = o
+		}
+	}
+
+	return m
+}
+
+func mapStructRead2(m map[MapKey]ObjectCache, sz uint64) {
+	var ok bool
+	for i := range sz {
+		for j := range sz {
+			_, ok = m[MapKey{i, j}]
 			if !ok {
 				panic(fmt.Errorf("missing entry i, j = %d, %d", i, j))
 			}
